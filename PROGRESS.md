@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 2 complete. Ready for Phase 3.
+Phase 3 complete. Ready for Phase 4.
 
 ## Confirmed
 
@@ -15,7 +15,6 @@ Phase 2 complete. Ready for Phase 3.
 
 ## Pending
 
-- Phase 3: non-stream chat completions
 - Phase 4: rule router and model slots
 - Phase 5: Ollama adapter
 - Phase 6: cloud adapter
@@ -26,4 +25,4 @@ Phase 2 complete. Ready for Phase 3.
 
 ## Next Step
 
-Start `Phase 3: non-stream chat completions`.
+Start `Phase 4: rule router and model slots`.

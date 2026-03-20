@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 2 is complete. Router-P now exposes a public health endpoint and protects non-health routes with a bearer API key.
+Phase 3 is complete. Router-P now exposes a non-streaming `POST /chat/completions` endpoint alongside the Phase 2 health and auth behavior.
 
-The next coding step is `Phase 3: non-streaming chat completions`.
+The next coding step is `Phase 4: rule router and model slots`.
 
 ## Quick Start
 
@@ -38,9 +38,19 @@ uvicorn router_p.main:app --reload
 ```bash
 curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:8000/ -H "Authorization: Bearer ${ROUTER_P_API_KEY:-dev-router-p-key}"
+curl http://127.0.0.1:8000/chat/completions \
+  -H "Authorization: Bearer ${ROUTER_P_API_KEY:-dev-router-p-key}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3:4b",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "stream": false
+  }'
 ```
 
 `GET /health` is public and returns service readiness. Other current routes require `Authorization: Bearer <ROUTER_P_API_KEY>`.
+`POST /chat/completions` accepts non-streaming OpenAI-style chat payloads. `stream: true` returns `400` until Phase 8 adds streaming support.
+Phase 3 uses a deterministic in-process placeholder response so the API contract is stable before provider integration arrives.
 
 ## Documents
 

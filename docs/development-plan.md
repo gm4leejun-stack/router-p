@@ -23,7 +23,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 3: Non-Streaming Chat Completions
 
-- Status: `not started`
+- Status: `complete`
 - Goal: implement the base `POST /chat/completions` flow for non-streaming requests
 - Done when:
   - OpenAI-style `messages` are accepted
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 3: Non-Streaming Chat Completions`.
+Begin with `Phase 4: Rule Router and Model Slots`.
