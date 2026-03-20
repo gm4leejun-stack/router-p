@@ -31,7 +31,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 4: Rule Router and Model Slots
 
-- Status: `not started`
+- Status: `complete`
 - Goal: implement routing rules and internal model slot abstraction
 - Done when:
   - rule-based routing covers common text, code, and complex task categories
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 4: Rule Router and Model Slots`.
+Begin with `Phase 5: Ollama Adapter`.

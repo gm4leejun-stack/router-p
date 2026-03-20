@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 3 complete. Ready for Phase 4.
+Phase 4 complete. Ready for Phase 5.
 
 ## Confirmed
 
@@ -15,7 +15,6 @@ Phase 3 complete. Ready for Phase 4.
 
 ## Pending
 
-- Phase 4: rule router and model slots
 - Phase 5: Ollama adapter
 - Phase 6: cloud adapter
 - Phase 7: boundary classification and fallback
@@ -25,4 +24,4 @@ Phase 3 complete. Ready for Phase 4.
 
 ## Next Step
 
-Start `Phase 4: rule router and model slots`.
+Start `Phase 5: Ollama adapter`.

@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 3 is complete. Router-P now exposes a non-streaming `POST /chat/completions` endpoint alongside the Phase 2 health and auth behavior.
+Phase 4 is complete. Router-P now applies internal rule routing and centralized model slots to non-stream chat completions.
 
-The next coding step is `Phase 4: rule router and model slots`.
+The next coding step is `Phase 5: Ollama adapter`.
 
 ## Quick Start
 
@@ -42,15 +42,16 @@ curl http://127.0.0.1:8000/chat/completions \
   -H "Authorization: Bearer ${ROUTER_P_API_KEY:-dev-router-p-key}" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen3:4b",
-    "messages": [{"role": "user", "content": "Hello"}],
+    "model": "router-auto",
+    "messages": [{"role": "user", "content": "Write a Python helper for retries"}],
     "stream": false
   }'
 ```
 
 `GET /health` is public and returns service readiness. Other current routes require `Authorization: Bearer <ROUTER_P_API_KEY>`.
 `POST /chat/completions` accepts non-streaming OpenAI-style chat payloads. `stream: true` returns `400` until Phase 8 adds streaming support.
-Phase 3 uses a deterministic in-process placeholder response so the API contract is stable before provider integration arrives.
+`router-auto` is the internal routing model name for Phase 4. Rule routing now maps requests to centralized slots for local text, local code, cloud text, and cloud code.
+Phase 4 still uses placeholder responses; provider integrations arrive in Phases 5 and 6.
 
 ## Documents
 
