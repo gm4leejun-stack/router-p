@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
+
+from router_p.api.dependencies import require_api_key
 
 router = APIRouter()
 
 
-@router.get("/", tags=["meta"])
+@router.get("/", tags=["meta"], dependencies=[Depends(require_api_key)])
 async def root() -> dict[str, str]:
     return {"service": "router-p", "status": "booted"}
 
