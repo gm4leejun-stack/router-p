@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 4 is complete. Router-P now applies internal rule routing and centralized model slots to non-stream chat completions.
+Phase 5 is complete. Router-P now routes local text and code chat completions through an Ollama-backed provider adapter.
 
-The next coding step is `Phase 5: Ollama adapter`.
+The next coding step is `Phase 6: cloud adapter`.
 
 ## Quick Start
 
@@ -51,7 +51,16 @@ curl http://127.0.0.1:8000/chat/completions \
 `GET /health` is public and returns service readiness. Other current routes require `Authorization: Bearer <ROUTER_P_API_KEY>`.
 `POST /chat/completions` accepts non-streaming OpenAI-style chat payloads. `stream: true` returns `400` until Phase 8 adds streaming support.
 `router-auto` is the internal routing model name for Phase 4. Rule routing now maps requests to centralized slots for local text, local code, cloud text, and cloud code.
-Phase 4 still uses placeholder responses; provider integrations arrive in Phases 5 and 6.
+Phase 5 routes local text and code requests through Ollama. Ensure `Ollama` is running and the default models are available locally.
+Cloud-routed slots remain on a temporary path until the Phase 6 cloud adapter is added.
+
+5. Prepare local Ollama models:
+
+```bash
+ollama pull phi4-mini
+ollama pull qwen3:4b
+ollama pull qwen2.5-coder:7b
+```
 
 ## Documents
 

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 4 complete. Ready for Phase 5.
+Phase 5 complete. Ready for Phase 6.
 
 ## Confirmed
 
@@ -15,7 +15,6 @@ Phase 4 complete. Ready for Phase 5.
 
 ## Pending
 
-- Phase 5: Ollama adapter
 - Phase 6: cloud adapter
 - Phase 7: boundary classification and fallback
 - Phase 8: streaming support
@@ -24,4 +23,4 @@ Phase 4 complete. Ready for Phase 5.
 
 ## Next Step
 
-Start `Phase 5: Ollama adapter`.
+Start `Phase 6: cloud adapter`.

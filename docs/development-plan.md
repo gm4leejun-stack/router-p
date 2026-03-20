@@ -39,7 +39,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 5: Ollama Adapter
 
-- Status: `not started`
+- Status: `complete`
 - Goal: integrate local `Ollama` models
 - Done when:
   - `phi4-mini`, `qwen3:4b`, and `qwen2.5-coder:7b` can be called through one provider interface
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 5: Ollama Adapter`.
+Begin with `Phase 6: Cloud Adapter`.
