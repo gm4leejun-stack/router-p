@@ -15,7 +15,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 2: Health Check and Authentication
 
-- Status: `ready to start`
+- Status: `complete`
 - Goal: add `GET /health` and single API key protection
 - Done when:
   - health endpoint returns service readiness
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 2: Health Check and Authentication`.
+Begin with `Phase 3: Non-Streaming Chat Completions`.

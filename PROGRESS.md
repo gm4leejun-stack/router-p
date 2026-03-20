@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 1 complete. Phase 2 plan written and ready to execute.
+Phase 2 complete. Ready for Phase 3.
 
 ## Confirmed
 
@@ -15,7 +15,6 @@ Phase 1 complete. Phase 2 plan written and ready to execute.
 
 ## Pending
 
-- Phase 2: health check and authentication
 - Phase 3: non-stream chat completions
 - Phase 4: rule router and model slots
 - Phase 5: Ollama adapter
@@ -27,4 +26,4 @@ Phase 1 complete. Phase 2 plan written and ready to execute.
 
 ## Next Step
 
-Execute `Phase 2: health check and authentication` using `docs/superpowers/plans/2026-03-20-phase-2-health-check-and-authentication.md`.
+Start `Phase 3: non-stream chat completions`.

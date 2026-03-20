@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 1 is complete. The FastAPI scaffold and environment-based configuration system are in place.
+Phase 2 is complete. Router-P now exposes a public health endpoint and protects non-health routes with a bearer API key.
 
-The next coding step is `Phase 2: health check and authentication`.
+The next coding step is `Phase 3: non-streaming chat completions`.
 
 ## Quick Start
 
@@ -33,7 +33,14 @@ ROUTER_P_CLOUD_API_KEY=
 uvicorn router_p.main:app --reload
 ```
 
-The service exposes a minimal boot endpoint at `/` during scaffold phase. Health and auth arrive in Phase 2.
+4. Call the API:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/ -H "Authorization: Bearer ${ROUTER_P_API_KEY:-dev-router-p-key}"
+```
+
+`GET /health` is public and returns service readiness. Other current routes require `Authorization: Bearer <ROUTER_P_API_KEY>`.
 
 ## Documents
 
