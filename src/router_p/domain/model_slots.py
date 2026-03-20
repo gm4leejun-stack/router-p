@@ -20,3 +20,11 @@ def resolve_model_slot(slot: ModelSlot, settings: Settings) -> str | None:
         ModelSlot.LOCAL_BOUNDARY: settings.local_boundary_model,
     }
     return mapping[slot]
+
+
+def is_local_slot(slot: ModelSlot) -> bool:
+    return slot in {
+        ModelSlot.LOCAL_TEXT,
+        ModelSlot.LOCAL_CODE,
+        ModelSlot.LOCAL_BOUNDARY,
+    }
