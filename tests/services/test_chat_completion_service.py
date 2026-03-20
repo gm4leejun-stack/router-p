@@ -1,6 +1,7 @@
 import pytest
 
 from router_p.api.schemas.chat import ChatCompletionRequest
+from router_p.config import Settings
 from router_p.services.chat_completion import ChatCompletionService
 
 
@@ -50,3 +51,35 @@ def test_service_rejects_requests_without_user_message():
 
     with pytest.raises(ValueError, match="at least one user message"):
         service.create_completion(request)
+
+
+def test_service_uses_route_decision_to_select_internal_model():
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        local_code_model="qwen2.5-coder:7b",
+        cloud_general_model="gpt-general",
+        cloud_code_model="gpt-code",
+    )
+    service = ChatCompletionService(settings=settings)
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Write a Python unit test for a login handler"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "qwen2.5-coder:7b"
+    assert response.choices[0].message.content.startswith("Echo:")
+
+
+def test_service_respects_explicit_model_without_rule_override():
+    settings = Settings(local_general_model="qwen3:4b")
+    service = ChatCompletionService(settings=settings)
+    request = ChatCompletionRequest(
+        model="custom-model",
+        messages=[{"role": "user", "content": "Write a short greeting"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "custom-model"
