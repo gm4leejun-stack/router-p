@@ -4,9 +4,36 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Planning is complete. Implementation has not started yet.
+Phase 1 is complete. The FastAPI scaffold and environment-based configuration system are in place.
 
-The next coding step is `Phase 1: project scaffold and configuration system`.
+The next coding step is `Phase 2: health check and authentication`.
+
+## Quick Start
+
+1. Create a virtual environment and install dependencies:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+2. Optionally define overrides in `.env`:
+
+```env
+ROUTER_P_API_KEY=dev-router-p-key
+ROUTER_P_OLLAMA_BASE_URL=http://localhost:11434
+ROUTER_P_CLOUD_BASE_URL=
+ROUTER_P_CLOUD_API_KEY=
+```
+
+3. Start the API:
+
+```bash
+uvicorn router_p.main:app --reload
+```
+
+The service exposes a minimal boot endpoint at `/` during scaffold phase. Health and auth arrive in Phase 2.
 
 ## Documents
 

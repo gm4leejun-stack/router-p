@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Planning complete. Coding not started.
+Phase 1 complete. Ready for Phase 2.
 
 ## Confirmed
 
@@ -15,7 +15,6 @@ Planning complete. Coding not started.
 
 ## Pending
 
-- Phase 1: project scaffold and configuration system
 - Phase 2: health check and authentication
 - Phase 3: non-stream chat completions
 - Phase 4: rule router and model slots
@@ -28,4 +27,4 @@ Planning complete. Coding not started.
 
 ## Next Step
 
-Start `Phase 1: project scaffold and configuration system`.
+Start `Phase 2: health check and authentication`.

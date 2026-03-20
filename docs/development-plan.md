@@ -6,7 +6,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 1: Project Scaffold and Configuration System
 
-- Status: `not started`
+- Status: `complete`
 - Goal: create the Python project skeleton, dependency setup, app entrypoint, and environment-based configuration
 - Done when:
   - FastAPI app boots locally
@@ -15,7 +15,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 2: Health Check and Authentication
 
-- Status: `not started`
+- Status: `ready to start`
 - Goal: add `GET /health` and single API key protection
 - Done when:
   - health endpoint returns service readiness
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 1: Project Scaffold and Configuration System`.
+Begin with `Phase 2: Health Check and Authentication`.
