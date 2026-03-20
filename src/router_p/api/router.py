@@ -5,7 +5,6 @@ from router_p.api.schemas.chat import ChatCompletionRequest, ChatCompletionRespo
 from router_p.services.chat_completion import ChatCompletionService
 
 router = APIRouter()
-chat_completion_service = ChatCompletionService()
 
 
 @router.get("/", tags=["meta"], dependencies=[Depends(require_api_key)])
@@ -30,6 +29,7 @@ async def health(request: Request) -> dict[str, str]:
     response_model=ChatCompletionResponse,
 )
 async def create_chat_completion(
+    request: Request,
     payload: ChatCompletionRequest,
 ) -> ChatCompletionResponse:
     if payload.stream:
@@ -37,4 +37,5 @@ async def create_chat_completion(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Streaming is not supported yet",
         )
-    return chat_completion_service.create_completion(payload)
+    service = ChatCompletionService(settings=request.app.state.settings)
+    return service.create_completion(payload)

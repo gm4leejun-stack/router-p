@@ -54,3 +54,35 @@ def test_chat_completions_validates_message_shape(client, auth_headers):
     )
 
     assert response.status_code == 422
+
+
+def test_chat_completions_routes_router_auto_code_requests(client, auth_headers):
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "router-auto",
+            "messages": [{"role": "user", "content": "Refactor this Python function"}],
+            "stream": False,
+        },
+    )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["model"] == "qwen2.5-coder:7b"
+
+
+def test_chat_completions_routes_simple_text_requests_to_local_text(client, auth_headers):
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "router-auto",
+            "messages": [{"role": "user", "content": "Write a short welcome message"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "qwen3:4b"

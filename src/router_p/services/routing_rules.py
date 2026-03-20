@@ -30,7 +30,6 @@ COMPLEX_CODE_KEYWORDS = {
     "codebase",
     "large-scale",
     "deep debugging",
-    "refactor",
 }
 
 
