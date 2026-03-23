@@ -68,7 +68,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 9: Logging and Error Handling
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add decision-level logging and consistent error responses
 - Done when:
   - routing logs are emitted with model and fallback metadata
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 9: Logging and Error Handling`.
+Begin with `Phase 10: Compose, Docs, and OpenClaw Validation`.

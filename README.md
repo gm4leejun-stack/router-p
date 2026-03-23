@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 8 is complete. Router-P now supports streaming chat completions for both local and cloud provider paths.
+Phase 9 is complete. Router-P now supports stable API error envelopes and decision-level routing logs.
 
-The next coding step is `Phase 9: logging and error handling`.
+The next coding step is `Phase 10: Compose, docs, and OpenClaw validation`.
 
 ## Quick Start
 
@@ -55,6 +55,7 @@ Phase 5 routes local text and code requests through Ollama. Ensure `Ollama` is r
 Phase 6 routes cloud targets through an OpenAI-compatible provider using `ROUTER_P_CLOUD_BASE_URL` and `ROUTER_P_CLOUD_API_KEY`.
 Phase 7 uses `phi4-mini`-style boundary classification for ambiguous requests and falls back to cloud when local executions fail, time out, or return low-confidence / too-short results.
 Phase 8 emits OpenAI-style SSE chunks plus terminal `[DONE]` for `stream: true` requests.
+Phase 9 adds structured decision logs with provider / selected model / route layer / fallback metadata, plus stable API errors for auth and provider failures in the form `{"error": {"code", "message", "type"}}`.
 
 5. Prepare local Ollama models:
 
@@ -101,4 +102,5 @@ curl http://127.0.0.1:8000/chat/completions \
 - Local-first routing with `Ollama`
 - Default local bundle: `phi4-mini`, `qwen3:4b`, `qwen2.5-coder:7b`
 - Routing flow: rules first, `phi4-mini` boundary classification, cloud fallback
+- Structured routing logs and stable auth/provider API errors
 - Deployment via `Docker Compose` with external `Ollama`
