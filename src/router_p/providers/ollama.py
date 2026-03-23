@@ -1,6 +1,8 @@
+import json
+
 import httpx
 
-from router_p.providers.types import ProviderChatRequest, ProviderChatResponse
+from router_p.providers.types import ProviderChatRequest, ProviderChatResponse, ProviderStreamChunk
 
 
 class OllamaChatProvider:
@@ -34,3 +36,27 @@ class OllamaChatProvider:
             completion_tokens=completion_tokens,
             raw_model=payload.get("model", request.model),
         )
+
+    def stream_complete(self, request: ProviderChatRequest):
+        response = self._client.post(
+            "/api/chat",
+            json={
+                "model": request.model,
+                "messages": [message.model_dump() for message in request.messages],
+                "stream": True,
+            },
+            timeout=request.timeout_seconds,
+        )
+        if response.status_code >= 400:
+            raise RuntimeError("Ollama request failed")
+
+        for line in response.text.splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            content = payload.get("message", {}).get("content", "")
+            if content:
+                yield ProviderStreamChunk(
+                    content_delta=content,
+                    raw_model=payload.get("model", request.model),
+                )
