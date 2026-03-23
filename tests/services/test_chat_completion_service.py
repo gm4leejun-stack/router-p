@@ -1,0 +1,434 @@
+import logging
+
+import pytest
+
+from router_p.api.schemas.chat import ChatCompletionRequest
+from router_p.config import Settings
+from router_p.domain.model_slots import ModelSlot
+from router_p.providers.types import ProviderChatResponse, ProviderStreamChunk
+from router_p.services.rule_router import RouteDecision
+from router_p.services.chat_completion import ChatCompletionService
+
+
+class StubProvider:
+    def complete(self, request):
+        return ProviderChatResponse(
+            content="Provider hello",
+            prompt_tokens=4,
+            completion_tokens=2,
+            raw_model=request.model,
+        )
+
+    def stream_complete(self, request):
+        yield ProviderStreamChunk(content_delta="Hel", raw_model=request.model)
+        yield ProviderStreamChunk(content_delta="lo", raw_model=request.model)
+
+
+class StubCloudProvider:
+    def complete(self, request):
+        return ProviderChatResponse(
+            content="Cloud provider hello",
+            prompt_tokens=6,
+            completion_tokens=3,
+            raw_model=request.model,
+        )
+
+    def stream_complete(self, request):
+        yield ProviderStreamChunk(content_delta="Clo", raw_model=request.model)
+        yield ProviderStreamChunk(content_delta="ud", raw_model=request.model)
+
+
+class StubBoundaryClassifier:
+    def __init__(self, slot: ModelSlot) -> None:
+        self._slot = slot
+        self.called = False
+
+    def classify(self, request):
+        self.called = True
+        return self._slot
+
+
+class StubFallbackPolicy:
+    def __init__(self, response_should_fallback: bool = False) -> None:
+        self._response_should_fallback = response_should_fallback
+
+    def should_fallback_from_exception(self, exc: Exception) -> bool:
+        return True
+
+    def should_fallback_from_response(self, response: ProviderChatResponse) -> bool:
+        return self._response_should_fallback
+
+
+class BoundaryRouter:
+    def route(self, request):
+        return RouteDecision(
+            slot=ModelSlot.LOCAL_BOUNDARY,
+            rule_name="boundary_inconclusive",
+            reason="ambiguous",
+            decision_source="boundary",
+        )
+
+
+class FailingLocalProvider:
+    def complete(self, request):
+        raise RuntimeError("local failed")
+
+
+class WeakLocalProvider:
+    def __init__(self, content: str) -> None:
+        self._content = content
+
+    def complete(self, request):
+        return ProviderChatResponse(
+            content=self._content,
+            prompt_tokens=20,
+            completion_tokens=1,
+            raw_model=request.model,
+        )
+
+
+def test_chat_completion_request_accepts_openai_style_messages():
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[
+            {"role": "system", "content": "Be concise."},
+            {"role": "user", "content": "Hello"},
+        ],
+    )
+
+    assert request.model == "qwen3:4b"
+    assert request.stream is False
+    assert request.messages[0].role == "system"
+
+
+def test_chat_completion_request_requires_at_least_one_message():
+    with pytest.raises(ValueError, match="at least one message"):
+        ChatCompletionRequest(model="qwen3:4b", messages=[])
+
+
+def test_service_returns_assistant_message_for_latest_user_prompt():
+    service = ChatCompletionService(provider=StubProvider())
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[
+            {"role": "system", "content": "Be concise."},
+            {"role": "user", "content": "Summarize Phase 3"},
+        ],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.object == "chat.completion"
+    assert response.model == "qwen3:4b"
+    assert response.choices[0].message.content == "Provider hello"
+    assert response.choices[0].message.role == "assistant"
+
+
+def test_service_rejects_requests_without_user_message():
+    service = ChatCompletionService()
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "system", "content": "Only instructions"}],
+    )
+
+    with pytest.raises(ValueError, match="at least one user message"):
+        service.create_completion(request)
+
+
+def test_service_uses_route_decision_to_select_internal_model():
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        local_code_model="qwen2.5-coder:7b",
+        cloud_general_model="gpt-general",
+        cloud_code_model="gpt-code",
+    )
+    service = ChatCompletionService(settings=settings, provider=StubProvider())
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Write a Python unit test for a login handler"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "qwen2.5-coder:7b"
+    assert response.choices[0].message.content == "Provider hello"
+
+
+def test_service_respects_explicit_model_without_rule_override():
+    settings = Settings(local_general_model="qwen3:4b")
+    service = ChatCompletionService(settings=settings, provider=StubProvider())
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Write a short greeting"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "qwen3:4b"
+    assert response.choices[0].message.content == "Provider hello"
+
+
+def test_service_uses_cloud_provider_for_router_auto_complex_general_requests():
+    settings = Settings(cloud_general_model="gpt-general")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Compare three architectures and migration strategy"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-general"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_uses_cloud_provider_for_router_auto_complex_code_requests():
+    settings = Settings(cloud_code_model="gpt-code")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Multi-file codebase refactor and deep debugging plan"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-code"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_uses_cloud_provider_for_explicit_cloud_model():
+    settings = Settings(cloud_general_model="gpt-general")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="gpt-general",
+        messages=[{"role": "user", "content": "Hello cloud"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-general"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_uses_boundary_classifier_for_inconclusive_requests():
+    settings = Settings(local_general_model="qwen3:4b")
+    classifier = StubBoundaryClassifier(ModelSlot.LOCAL_TEXT)
+    service = ChatCompletionService(
+        settings=settings,
+        router=BoundaryRouter(),
+        provider=StubProvider(),
+        boundary_classifier=classifier,
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Help me figure out the best model for this"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert classifier.called is True
+    assert response.model == "qwen3:4b"
+
+
+def test_service_falls_back_to_cloud_on_local_exception():
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        cloud_general_model="gpt-general",
+    )
+    service = ChatCompletionService(
+        settings=settings,
+        provider=FailingLocalProvider(),
+        cloud_provider=StubCloudProvider(),
+        fallback_policy=StubFallbackPolicy(),
+    )
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-general"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_falls_back_to_cloud_on_short_local_output():
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        cloud_general_model="gpt-general",
+    )
+    service = ChatCompletionService(
+        settings=settings,
+        provider=WeakLocalProvider("short"),
+        cloud_provider=StubCloudProvider(),
+        fallback_policy=StubFallbackPolicy(response_should_fallback=True),
+    )
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Give me a detailed explanation"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-general"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_falls_back_to_cloud_on_low_confidence_local_output():
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        cloud_general_model="gpt-general",
+    )
+    service = ChatCompletionService(
+        settings=settings,
+        provider=WeakLocalProvider("I think maybe"),
+        cloud_provider=StubCloudProvider(),
+        fallback_policy=StubFallbackPolicy(response_should_fallback=True),
+    )
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Answer clearly"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-general"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_streams_local_provider_for_explicit_local_model():
+    service = ChatCompletionService(provider=StubProvider())
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Hello"}],
+        stream=True,
+    )
+
+    chunks = list(service.stream_completion(request))
+
+    assert [chunk.content_delta for chunk in chunks] == ["Hel", "lo"]
+
+
+def test_service_streams_cloud_provider_for_explicit_cloud_model():
+    settings = Settings(cloud_general_model="gpt-general")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="gpt-general",
+        messages=[{"role": "user", "content": "Hello"}],
+        stream=True,
+    )
+
+    chunks = list(service.stream_completion(request))
+
+    assert [chunk.content_delta for chunk in chunks] == ["Clo", "ud"]
+
+
+def test_service_streams_boundary_classified_requests_through_selected_provider():
+    classifier = StubBoundaryClassifier(ModelSlot.LOCAL_TEXT)
+    service = ChatCompletionService(
+        router=BoundaryRouter(),
+        provider=StubProvider(),
+        boundary_classifier=classifier,
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Help me figure out the best model for this"}],
+        stream=True,
+    )
+
+    chunks = list(service.stream_completion(request))
+
+    assert classifier.called is True
+    assert [chunk.content_delta for chunk in chunks] == ["Hel", "lo"]
+
+
+def test_service_logs_direct_local_route_decision(caplog):
+    logger = logging.getLogger("router_p.test.chat")
+    service = ChatCompletionService(provider=StubProvider(), logger=logger)
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Write a short greeting"}],
+    )
+
+    with caplog.at_level(logging.INFO, logger="router_p.test.chat"):
+        service.create_completion(request)
+
+    assert caplog.records[0].route_decision == {
+        "provider": "ollama",
+        "selected_model": "qwen3:4b",
+        "route_layer": "explicit_model",
+        "rule": "explicit_model",
+    }
+
+
+def test_service_logs_boundary_classified_route_decision(caplog):
+    logger = logging.getLogger("router_p.test.chat")
+    settings = Settings(local_general_model="qwen3:4b")
+    classifier = StubBoundaryClassifier(ModelSlot.LOCAL_TEXT)
+    service = ChatCompletionService(
+        settings=settings,
+        router=BoundaryRouter(),
+        provider=StubProvider(),
+        boundary_classifier=classifier,
+        logger=logger,
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Help me figure out the best model for this"}],
+    )
+
+    with caplog.at_level(logging.INFO, logger="router_p.test.chat"):
+        service.create_completion(request)
+
+    assert caplog.records[0].route_decision == {
+        "provider": "ollama",
+        "selected_model": "qwen3:4b",
+        "route_layer": "boundary_classifier",
+        "rule": "boundary_inconclusive",
+    }
+
+
+def test_service_logs_fallback_route_decision(caplog):
+    logger = logging.getLogger("router_p.test.chat")
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        cloud_general_model="gpt-general",
+    )
+    service = ChatCompletionService(
+        settings=settings,
+        provider=FailingLocalProvider(),
+        cloud_provider=StubCloudProvider(),
+        fallback_policy=StubFallbackPolicy(),
+        logger=logger,
+    )
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+
+    with caplog.at_level(logging.INFO, logger="router_p.test.chat"):
+        service.create_completion(request)
+
+    assert caplog.records[-1].route_decision == {
+        "provider": "cloud",
+        "selected_model": "gpt-general",
+        "route_layer": "fallback",
+        "rule": "local_exception",
+        "fallback_reason": "local failed",
+    }

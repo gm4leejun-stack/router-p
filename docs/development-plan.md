@@ -15,7 +15,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 2: Health Check and Authentication
 
-- Status: `ready to start`
+- Status: `complete`
 - Goal: add `GET /health` and single API key protection
 - Done when:
   - health endpoint returns service readiness
@@ -23,7 +23,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 3: Non-Streaming Chat Completions
 
-- Status: `not started`
+- Status: `complete`
 - Goal: implement the base `POST /chat/completions` flow for non-streaming requests
 - Done when:
   - OpenAI-style `messages` are accepted
@@ -31,7 +31,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 4: Rule Router and Model Slots
 
-- Status: `not started`
+- Status: `complete`
 - Goal: implement routing rules and internal model slot abstraction
 - Done when:
   - rule-based routing covers common text, code, and complex task categories
@@ -39,21 +39,21 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 5: Ollama Adapter
 
-- Status: `not started`
+- Status: `complete`
 - Goal: integrate local `Ollama` models
 - Done when:
   - `phi4-mini`, `qwen3:4b`, and `qwen2.5-coder:7b` can be called through one provider interface
 
 ## Phase 6: Cloud Adapter
 
-- Status: `not started`
+- Status: `complete`
 - Goal: integrate one OpenAI-compatible cloud provider interface for general and code models
 - Done when:
   - cloud requests can be routed through the same internal provider abstraction
 
 ## Phase 7: Boundary Classification and Fallback
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add `phi4-mini` classification and cloud fallback policy
 - Done when:
   - inconclusive tasks are classified by `phi4-mini`
@@ -61,14 +61,14 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 8: Streaming Support
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add streaming response support for local and cloud calls
 - Done when:
   - streaming requests work end to end through the OpenAI-compatible endpoint
 
 ## Phase 9: Logging and Error Handling
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add decision-level logging and consistent error responses
 - Done when:
   - routing logs are emitted with model and fallback metadata
@@ -76,7 +76,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 10: Compose, Docs, and OpenClaw Validation
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add deployment assets and verify OpenClaw integration
 - Done when:
   - `docker-compose.yml` and `.env.example` exist
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 2: Health Check and Authentication`.
+Router-P v1 is complete. Future work should start from a new scoped phase or v1.1 plan.
