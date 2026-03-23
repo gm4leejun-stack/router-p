@@ -28,3 +28,10 @@ def is_local_slot(slot: ModelSlot) -> bool:
         ModelSlot.LOCAL_CODE,
         ModelSlot.LOCAL_BOUNDARY,
     }
+
+
+def is_cloud_slot(slot: ModelSlot) -> bool:
+    return slot in {
+        ModelSlot.CLOUD_TEXT,
+        ModelSlot.CLOUD_CODE,
+    }

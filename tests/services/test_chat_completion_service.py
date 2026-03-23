@@ -16,6 +16,16 @@ class StubProvider:
         )
 
 
+class StubCloudProvider:
+    def complete(self, request):
+        return ProviderChatResponse(
+            content="Cloud provider hello",
+            prompt_tokens=6,
+            completion_tokens=3,
+            raw_model=request.model,
+        )
+
+
 def test_chat_completion_request_accepts_openai_style_messages():
     request = ChatCompletionRequest(
         model="qwen3:4b",
@@ -97,9 +107,13 @@ def test_service_respects_explicit_model_without_rule_override():
     assert response.choices[0].message.content == "Provider hello"
 
 
-def test_service_keeps_cloud_routed_requests_on_placeholder_path_for_now():
+def test_service_uses_cloud_provider_for_router_auto_complex_general_requests():
     settings = Settings(cloud_general_model="gpt-general")
-    service = ChatCompletionService(settings=settings, provider=StubProvider())
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
     request = ChatCompletionRequest(
         model="router-auto",
         messages=[{"role": "user", "content": "Compare three architectures and migration strategy"}],
@@ -108,4 +122,40 @@ def test_service_keeps_cloud_routed_requests_on_placeholder_path_for_now():
     response = service.create_completion(request)
 
     assert response.model == "gpt-general"
-    assert response.choices[0].message.content.startswith("Echo:")
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_uses_cloud_provider_for_router_auto_complex_code_requests():
+    settings = Settings(cloud_code_model="gpt-code")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Multi-file codebase refactor and deep debugging plan"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-code"
+    assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_uses_cloud_provider_for_explicit_cloud_model():
+    settings = Settings(cloud_general_model="gpt-general")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="gpt-general",
+        messages=[{"role": "user", "content": "Hello cloud"}],
+    )
+
+    response = service.create_completion(request)
+
+    assert response.model == "gpt-general"
+    assert response.choices[0].message.content == "Cloud provider hello"
