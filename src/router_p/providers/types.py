@@ -14,3 +14,8 @@ class ProviderChatResponse(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     raw_model: str
+
+
+class ProviderStreamChunk(BaseModel):
+    content_delta: str
+    raw_model: str
