@@ -3,7 +3,7 @@ import pytest
 from router_p.api.schemas.chat import ChatCompletionRequest
 from router_p.config import Settings
 from router_p.domain.model_slots import ModelSlot
-from router_p.providers.types import ProviderChatResponse
+from router_p.providers.types import ProviderChatResponse, ProviderStreamChunk
 from router_p.services.rule_router import RouteDecision
 from router_p.services.chat_completion import ChatCompletionService
 
@@ -17,6 +17,10 @@ class StubProvider:
             raw_model=request.model,
         )
 
+    def stream_complete(self, request):
+        yield ProviderStreamChunk(content_delta="Hel", raw_model=request.model)
+        yield ProviderStreamChunk(content_delta="lo", raw_model=request.model)
+
 
 class StubCloudProvider:
     def complete(self, request):
@@ -26,6 +30,10 @@ class StubCloudProvider:
             completion_tokens=3,
             raw_model=request.model,
         )
+
+    def stream_complete(self, request):
+        yield ProviderStreamChunk(content_delta="Clo", raw_model=request.model)
+        yield ProviderStreamChunk(content_delta="ud", raw_model=request.model)
 
 
 class StubBoundaryClassifier:
@@ -296,3 +304,53 @@ def test_service_falls_back_to_cloud_on_low_confidence_local_output():
 
     assert response.model == "gpt-general"
     assert response.choices[0].message.content == "Cloud provider hello"
+
+
+def test_service_streams_local_provider_for_explicit_local_model():
+    service = ChatCompletionService(provider=StubProvider())
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Hello"}],
+        stream=True,
+    )
+
+    chunks = list(service.stream_completion(request))
+
+    assert [chunk.content_delta for chunk in chunks] == ["Hel", "lo"]
+
+
+def test_service_streams_cloud_provider_for_explicit_cloud_model():
+    settings = Settings(cloud_general_model="gpt-general")
+    service = ChatCompletionService(
+        settings=settings,
+        provider=StubProvider(),
+        cloud_provider=StubCloudProvider(),
+    )
+    request = ChatCompletionRequest(
+        model="gpt-general",
+        messages=[{"role": "user", "content": "Hello"}],
+        stream=True,
+    )
+
+    chunks = list(service.stream_completion(request))
+
+    assert [chunk.content_delta for chunk in chunks] == ["Clo", "ud"]
+
+
+def test_service_streams_boundary_classified_requests_through_selected_provider():
+    classifier = StubBoundaryClassifier(ModelSlot.LOCAL_TEXT)
+    service = ChatCompletionService(
+        router=BoundaryRouter(),
+        provider=StubProvider(),
+        boundary_classifier=classifier,
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Help me figure out the best model for this"}],
+        stream=True,
+    )
+
+    chunks = list(service.stream_completion(request))
+
+    assert classifier.called is True
+    assert [chunk.content_delta for chunk in chunks] == ["Hel", "lo"]
