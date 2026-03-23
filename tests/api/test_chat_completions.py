@@ -21,6 +21,21 @@ class StubCloudProvider:
         )
 
 
+class StubBoundaryProvider:
+    def complete(self, request):
+        return ProviderChatResponse(
+            content="local_text",
+            prompt_tokens=2,
+            completion_tokens=1,
+            raw_model=request.model,
+        )
+
+
+class FailingLocalProvider:
+    def complete(self, request):
+        raise RuntimeError("local failed")
+
+
 def test_chat_completions_requires_api_key(client):
     response = client.post(
         "/chat/completions",
@@ -200,6 +215,59 @@ def test_chat_completions_uses_explicit_cloud_model(client, auth_headers, monkey
         json={
             "model": "gpt-general",
             "messages": [{"role": "user", "content": "Hello cloud"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "gpt-general"
+    assert response.json()["choices"][0]["message"]["content"] == "Stub cloud reply"
+
+
+def test_chat_completions_boundary_requests_use_boundary_classifier(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: StubProvider(),
+    )
+    monkeypatch.setattr(
+        "router_p.services.boundary_classifier.OllamaChatProvider",
+        lambda **kwargs: StubBoundaryProvider(),
+    )
+
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "router-auto",
+            "messages": [{"role": "user", "content": "Help me figure out the best model for this"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "qwen3:4b"
+    assert response.json()["choices"][0]["message"]["content"] == "Stub local reply"
+
+
+def test_chat_completions_falls_back_to_cloud_when_local_provider_fails(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: FailingLocalProvider(),
+    )
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OpenAICompatibleCloudProvider",
+        lambda **kwargs: StubCloudProvider(),
+    )
+    client.app.state.settings.cloud_general_model = "gpt-general"
+    client.app.state.settings.cloud_api_key = "test-cloud-key"
+    client.app.state.settings.cloud_base_url = "http://cloud.test"
+
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "qwen3:4b",
+            "messages": [{"role": "user", "content": "Hello"}],
             "stream": False,
         },
     )

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 6 complete. Ready for Phase 7.
+Phase 7 complete. Ready for Phase 8.
 
 ## Confirmed
 
@@ -15,11 +15,10 @@ Phase 6 complete. Ready for Phase 7.
 
 ## Pending
 
-- Phase 7: boundary classification and fallback
 - Phase 8: streaming support
 - Phase 9: logging and error handling
 - Phase 10: Compose, docs, and OpenClaw validation
 
 ## Next Step
 
-Start `Phase 7: boundary classification and fallback`.
+Start `Phase 8: streaming support`.

@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 6 is complete. Router-P now routes cloud targets through an OpenAI-compatible cloud provider adapter alongside the local Ollama adapter.
+Phase 7 is complete. Router-P now adds boundary classification for ambiguous requests and cloud fallback for weak or failed local executions.
 
-The next coding step is `Phase 7: boundary classification and fallback`.
+The next coding step is `Phase 8: streaming support`.
 
 ## Quick Start
 
@@ -53,6 +53,7 @@ curl http://127.0.0.1:8000/chat/completions \
 `router-auto` is the internal routing model name for Phase 4. Rule routing now maps requests to centralized slots for local text, local code, cloud text, and cloud code.
 Phase 5 routes local text and code requests through Ollama. Ensure `Ollama` is running and the default models are available locally.
 Phase 6 routes cloud targets through an OpenAI-compatible provider using `ROUTER_P_CLOUD_BASE_URL` and `ROUTER_P_CLOUD_API_KEY`.
+Phase 7 uses `phi4-mini`-style boundary classification for ambiguous requests and falls back to cloud when local executions fail, time out, or return low-confidence / too-short results.
 
 5. Prepare local Ollama models:
 

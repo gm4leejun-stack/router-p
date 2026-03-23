@@ -53,7 +53,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 7: Boundary Classification and Fallback
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add `phi4-mini` classification and cloud fallback policy
 - Done when:
   - inconclusive tasks are classified by `phi4-mini`
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 7: Boundary Classification and Fallback`.
+Begin with `Phase 8: Streaming Support`.
