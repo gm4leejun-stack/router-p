@@ -45,3 +45,16 @@ def test_rule_router_defaults_to_local_text():
 
     assert decision.slot is ModelSlot.LOCAL_TEXT
     assert decision.rule_name == "default_local_text"
+
+
+def test_rule_router_marks_ambiguous_requests_for_boundary_classification():
+    router = RuleRouter()
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Help me figure out the best model for this task"}],
+    )
+
+    decision = router.route(request)
+
+    assert decision.slot is ModelSlot.LOCAL_BOUNDARY
+    assert decision.rule_name == "boundary_inconclusive"

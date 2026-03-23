@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from router_p.api.schemas.chat import ChatCompletionRequest
 from router_p.domain.model_slots import ModelSlot
 from router_p.services.routing_rules import (
+    matches_boundary_request,
     matches_code_request,
     matches_complex_code_request,
     matches_complex_general_request,
@@ -37,6 +38,13 @@ class RuleRouter:
                 slot=ModelSlot.CLOUD_TEXT,
                 rule_name="complex_reasoning",
                 reason="matched complex general reasoning signals",
+            )
+        if matches_boundary_request(prompt):
+            return RouteDecision(
+                slot=ModelSlot.LOCAL_BOUNDARY,
+                rule_name="boundary_inconclusive",
+                reason="matched ambiguous routing signals",
+                decision_source="boundary",
             )
         return RouteDecision(
             slot=ModelSlot.LOCAL_TEXT,

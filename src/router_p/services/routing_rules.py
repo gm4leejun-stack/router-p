@@ -32,6 +32,13 @@ COMPLEX_CODE_KEYWORDS = {
     "deep debugging",
 }
 
+BOUNDARY_KEYWORDS = {
+    "best model",
+    "figure out",
+    "which model",
+    "decide the best route",
+}
+
 
 def matches_code_request(prompt: str) -> bool:
     return any(keyword in prompt for keyword in CODE_KEYWORDS) or "```" in prompt
@@ -43,3 +50,7 @@ def matches_complex_general_request(prompt: str) -> bool:
 
 def matches_complex_code_request(prompt: str) -> bool:
     return any(keyword in prompt for keyword in COMPLEX_CODE_KEYWORDS) and matches_code_request(prompt)
+
+
+def matches_boundary_request(prompt: str) -> bool:
+    return any(keyword in prompt for keyword in BOUNDARY_KEYWORDS)
