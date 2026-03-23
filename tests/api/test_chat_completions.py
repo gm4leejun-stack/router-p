@@ -1,4 +1,4 @@
-from router_p.providers.types import ProviderChatResponse
+from router_p.providers.types import ProviderChatResponse, ProviderStreamChunk
 
 
 class StubProvider:
@@ -10,6 +10,10 @@ class StubProvider:
             raw_model=request.model,
         )
 
+    def stream_complete(self, request):
+        yield ProviderStreamChunk(content_delta="Hel", raw_model=request.model)
+        yield ProviderStreamChunk(content_delta="lo", raw_model=request.model)
+
 
 class StubCloudProvider:
     def complete(self, request):
@@ -19,6 +23,10 @@ class StubCloudProvider:
             completion_tokens=4,
             raw_model=request.model,
         )
+
+    def stream_complete(self, request):
+        yield ProviderStreamChunk(content_delta="Clo", raw_model=request.model)
+        yield ProviderStreamChunk(content_delta="ud", raw_model=request.model)
 
 
 class StubBoundaryProvider:
@@ -73,7 +81,11 @@ def test_chat_completions_returns_non_stream_response(client, auth_headers, monk
     assert body["usage"]["total_tokens"] >= body["usage"]["completion_tokens"]
 
 
-def test_chat_completions_rejects_streaming_requests(client, auth_headers):
+def test_chat_completions_streams_local_responses(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: StubProvider(),
+    )
     response = client.post(
         "/chat/completions",
         headers=auth_headers,
@@ -84,8 +96,11 @@ def test_chat_completions_rejects_streaming_requests(client, auth_headers):
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Streaming is not supported yet"
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "chat.completion.chunk" in response.text
+    assert '"Hel"' in response.text
+    assert "data: [DONE]" in response.text
 
 
 def test_chat_completions_validates_message_shape(client, auth_headers):
@@ -275,3 +290,32 @@ def test_chat_completions_falls_back_to_cloud_when_local_provider_fails(client, 
     assert response.status_code == 200
     assert response.json()["model"] == "gpt-general"
     assert response.json()["choices"][0]["message"]["content"] == "Stub cloud reply"
+
+
+def test_chat_completions_streams_cloud_responses(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: StubProvider(),
+    )
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OpenAICompatibleCloudProvider",
+        lambda **kwargs: StubCloudProvider(),
+    )
+    client.app.state.settings.cloud_general_model = "gpt-general"
+    client.app.state.settings.cloud_api_key = "test-cloud-key"
+    client.app.state.settings.cloud_base_url = "http://cloud.test"
+
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "gpt-general",
+            "messages": [{"role": "user", "content": "Hello cloud"}],
+            "stream": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert '"Clo"' in response.text
+    assert "data: [DONE]" in response.text

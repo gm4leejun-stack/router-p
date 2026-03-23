@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
 
 from router_p.api.dependencies import require_api_key
+from router_p.api.streaming import format_sse_chunk, format_sse_done
 from router_p.api.schemas.chat import ChatCompletionRequest, ChatCompletionResponse
 from router_p.services.chat_completion import ChatCompletionService
 
@@ -31,11 +33,15 @@ async def health(request: Request) -> dict[str, str]:
 async def create_chat_completion(
     request: Request,
     payload: ChatCompletionRequest,
-) -> ChatCompletionResponse:
-    if payload.stream:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Streaming is not supported yet",
-        )
+) -> ChatCompletionResponse | StreamingResponse:
     service = ChatCompletionService(settings=request.app.state.settings)
+    if payload.stream:
+        chunk_id = "chatcmpl-stream"
+
+        def event_stream():
+            for chunk in service.stream_completion(payload):
+                yield format_sse_chunk(chunk, chunk_id=chunk_id)
+            yield format_sse_done()
+
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
     return service.create_completion(payload)
