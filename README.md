@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 5 is complete. Router-P now routes local text and code chat completions through an Ollama-backed provider adapter.
+Phase 6 is complete. Router-P now routes cloud targets through an OpenAI-compatible cloud provider adapter alongside the local Ollama adapter.
 
-The next coding step is `Phase 6: cloud adapter`.
+The next coding step is `Phase 7: boundary classification and fallback`.
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ curl http://127.0.0.1:8000/chat/completions \
 `POST /chat/completions` accepts non-streaming OpenAI-style chat payloads. `stream: true` returns `400` until Phase 8 adds streaming support.
 `router-auto` is the internal routing model name for Phase 4. Rule routing now maps requests to centralized slots for local text, local code, cloud text, and cloud code.
 Phase 5 routes local text and code requests through Ollama. Ensure `Ollama` is running and the default models are available locally.
-Cloud-routed slots remain on a temporary path until the Phase 6 cloud adapter is added.
+Phase 6 routes cloud targets through an OpenAI-compatible provider using `ROUTER_P_CLOUD_BASE_URL` and `ROUTER_P_CLOUD_API_KEY`.
 
 5. Prepare local Ollama models:
 
@@ -60,6 +60,15 @@ Cloud-routed slots remain on a temporary path until the Phase 6 cloud adapter is
 ollama pull phi4-mini
 ollama pull qwen3:4b
 ollama pull qwen2.5-coder:7b
+```
+
+6. Configure cloud models when needed:
+
+```env
+ROUTER_P_CLOUD_BASE_URL=https://your-openai-compatible-provider.example/v1
+ROUTER_P_CLOUD_API_KEY=your-cloud-api-key
+ROUTER_P_CLOUD_GENERAL_MODEL=gpt-general
+ROUTER_P_CLOUD_CODE_MODEL=gpt-code
 ```
 
 ## Documents

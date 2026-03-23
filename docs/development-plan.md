@@ -46,7 +46,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 6: Cloud Adapter
 
-- Status: `not started`
+- Status: `complete`
 - Goal: integrate one OpenAI-compatible cloud provider interface for general and code models
 - Done when:
   - cloud requests can be routed through the same internal provider abstraction
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 6: Cloud Adapter`.
+Begin with `Phase 7: Boundary Classification and Fallback`.

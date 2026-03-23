@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 5 complete. Ready for Phase 6.
+Phase 6 complete. Ready for Phase 7.
 
 ## Confirmed
 
@@ -15,7 +15,6 @@ Phase 5 complete. Ready for Phase 6.
 
 ## Pending
 
-- Phase 6: cloud adapter
 - Phase 7: boundary classification and fallback
 - Phase 8: streaming support
 - Phase 9: logging and error handling
@@ -23,4 +22,4 @@ Phase 5 complete. Ready for Phase 6.
 
 ## Next Step
 
-Start `Phase 6: cloud adapter`.
+Start `Phase 7: boundary classification and fallback`.
