@@ -4,9 +4,9 @@ Router-P is an OpenClaw-facing model router that prefers local models first and 
 
 ## Status
 
-Phase 7 is complete. Router-P now adds boundary classification for ambiguous requests and cloud fallback for weak or failed local executions.
+Phase 8 is complete. Router-P now supports streaming chat completions for both local and cloud provider paths.
 
-The next coding step is `Phase 8: streaming support`.
+The next coding step is `Phase 9: logging and error handling`.
 
 ## Quick Start
 
@@ -49,11 +49,12 @@ curl http://127.0.0.1:8000/chat/completions \
 ```
 
 `GET /health` is public and returns service readiness. Other current routes require `Authorization: Bearer <ROUTER_P_API_KEY>`.
-`POST /chat/completions` accepts non-streaming OpenAI-style chat payloads. `stream: true` returns `400` until Phase 8 adds streaming support.
+`POST /chat/completions` accepts both non-streaming and streaming OpenAI-style chat payloads.
 `router-auto` is the internal routing model name for Phase 4. Rule routing now maps requests to centralized slots for local text, local code, cloud text, and cloud code.
 Phase 5 routes local text and code requests through Ollama. Ensure `Ollama` is running and the default models are available locally.
 Phase 6 routes cloud targets through an OpenAI-compatible provider using `ROUTER_P_CLOUD_BASE_URL` and `ROUTER_P_CLOUD_API_KEY`.
 Phase 7 uses `phi4-mini`-style boundary classification for ambiguous requests and falls back to cloud when local executions fail, time out, or return low-confidence / too-short results.
+Phase 8 emits OpenAI-style SSE chunks plus terminal `[DONE]` for `stream: true` requests.
 
 5. Prepare local Ollama models:
 
@@ -70,6 +71,19 @@ ROUTER_P_CLOUD_BASE_URL=https://your-openai-compatible-provider.example/v1
 ROUTER_P_CLOUD_API_KEY=your-cloud-api-key
 ROUTER_P_CLOUD_GENERAL_MODEL=gpt-general
 ROUTER_P_CLOUD_CODE_MODEL=gpt-code
+```
+
+7. Stream a response:
+
+```bash
+curl http://127.0.0.1:8000/chat/completions \
+  -H "Authorization: Bearer ${ROUTER_P_API_KEY:-dev-router-p-key}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "router-auto",
+    "messages": [{"role": "user", "content": "Write a Python helper for retries"}],
+    "stream": true
+  }'
 ```
 
 ## Documents

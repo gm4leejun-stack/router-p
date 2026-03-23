@@ -61,7 +61,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 8: Streaming Support
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add streaming response support for local and cloud calls
 - Done when:
   - streaming requests work end to end through the OpenAI-compatible endpoint
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 8: Streaming Support`.
+Begin with `Phase 9: Logging and Error Handling`.

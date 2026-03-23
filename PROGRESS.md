@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 7 complete. Ready for Phase 8.
+Phase 8 complete. Ready for Phase 9.
 
 ## Confirmed
 
@@ -15,10 +15,9 @@ Phase 7 complete. Ready for Phase 8.
 
 ## Pending
 
-- Phase 8: streaming support
 - Phase 9: logging and error handling
 - Phase 10: Compose, docs, and OpenClaw validation
 
 ## Next Step
 
-Start `Phase 8: streaming support`.
+Start `Phase 9: logging and error handling`.
