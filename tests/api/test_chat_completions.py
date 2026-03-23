@@ -11,6 +11,16 @@ class StubProvider:
         )
 
 
+class StubCloudProvider:
+    def complete(self, request):
+        return ProviderChatResponse(
+            content="Stub cloud reply",
+            prompt_tokens=5,
+            completion_tokens=4,
+            raw_model=request.model,
+        )
+
+
 def test_chat_completions_requires_api_key(client):
     response = client.post(
         "/chat/completions",
@@ -113,3 +123,87 @@ def test_chat_completions_routes_simple_text_requests_to_local_text(client, auth
     assert response.status_code == 200
     assert response.json()["model"] == "qwen3:4b"
     assert response.json()["choices"][0]["message"]["content"] == "Stub local reply"
+
+
+def test_chat_completions_routes_complex_general_requests_to_cloud(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: StubProvider(),
+    )
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OpenAICompatibleCloudProvider",
+        lambda **kwargs: StubCloudProvider(),
+    )
+    client.app.state.settings.cloud_general_model = "gpt-general"
+    client.app.state.settings.cloud_api_key = "test-cloud-key"
+    client.app.state.settings.cloud_base_url = "http://cloud.test"
+
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "router-auto",
+            "messages": [{"role": "user", "content": "Compare three architectures and migration strategy"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "gpt-general"
+    assert response.json()["choices"][0]["message"]["content"] == "Stub cloud reply"
+
+
+def test_chat_completions_routes_complex_code_requests_to_cloud(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: StubProvider(),
+    )
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OpenAICompatibleCloudProvider",
+        lambda **kwargs: StubCloudProvider(),
+    )
+    client.app.state.settings.cloud_code_model = "gpt-code"
+    client.app.state.settings.cloud_api_key = "test-cloud-key"
+    client.app.state.settings.cloud_base_url = "http://cloud.test"
+
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "router-auto",
+            "messages": [{"role": "user", "content": "Multi-file codebase refactor and deep debugging plan"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "gpt-code"
+    assert response.json()["choices"][0]["message"]["content"] == "Stub cloud reply"
+
+
+def test_chat_completions_uses_explicit_cloud_model(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OllamaChatProvider",
+        lambda **kwargs: StubProvider(),
+    )
+    monkeypatch.setattr(
+        "router_p.services.chat_completion.OpenAICompatibleCloudProvider",
+        lambda **kwargs: StubCloudProvider(),
+    )
+    client.app.state.settings.cloud_general_model = "gpt-general"
+    client.app.state.settings.cloud_api_key = "test-cloud-key"
+    client.app.state.settings.cloud_base_url = "http://cloud.test"
+
+    response = client.post(
+        "/chat/completions",
+        headers=auth_headers,
+        json={
+            "model": "gpt-general",
+            "messages": [{"role": "user", "content": "Hello cloud"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == "gpt-general"
+    assert response.json()["choices"][0]["message"]["content"] == "Stub cloud reply"
