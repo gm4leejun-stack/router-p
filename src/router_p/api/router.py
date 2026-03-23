@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from router_p.api.dependencies import require_api_key
+from router_p.api.errors import ProviderError
 from router_p.api.streaming import format_sse_chunk, format_sse_done
 from router_p.api.schemas.chat import ChatCompletionRequest, ChatCompletionResponse
 from router_p.services.chat_completion import ChatCompletionService
@@ -37,11 +38,24 @@ async def create_chat_completion(
     service = ChatCompletionService(settings=request.app.state.settings)
     if payload.stream:
         chunk_id = "chatcmpl-stream"
+        iterator = iter(service.stream_completion(payload))
+
+        try:
+            first_chunk = next(iterator)
+        except StopIteration:
+            first_chunk = None
+        except RuntimeError as exc:
+            raise ProviderError(str(exc)) from exc
 
         def event_stream():
-            for chunk in service.stream_completion(payload):
+            if first_chunk is not None:
+                yield format_sse_chunk(first_chunk, chunk_id=chunk_id)
+            for chunk in iterator:
                 yield format_sse_chunk(chunk, chunk_id=chunk_id)
             yield format_sse_done()
 
         return StreamingResponse(event_stream(), media_type="text/event-stream")
-    return service.create_completion(payload)
+    try:
+        return service.create_completion(payload)
+    except RuntimeError as exc:
+        raise ProviderError(str(exc)) from exc
