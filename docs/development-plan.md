@@ -76,7 +76,7 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Phase 10: Compose, Docs, and OpenClaw Validation
 
-- Status: `not started`
+- Status: `complete`
 - Goal: add deployment assets and verify OpenClaw integration
 - Done when:
   - `docker-compose.yml` and `.env.example` exist
@@ -85,4 +85,4 @@ Work phases in order. Do not skip to a later phase until the current phase is co
 
 ## Next Coding Task
 
-Begin with `Phase 10: Compose, Docs, and OpenClaw Validation`.
+Router-P v1 is complete. Future work should start from a new scoped phase or v1.1 plan.

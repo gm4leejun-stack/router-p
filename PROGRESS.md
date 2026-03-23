@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 9 complete. Ready for Phase 10.
+Phase 10 complete. Router-P v1 is complete.
 
 ## Confirmed
 
@@ -13,11 +13,8 @@ Phase 9 complete. Ready for Phase 10.
 - Routing flow: rules first, `phi4-mini` boundary classification, cloud fallback
 - Deployment: `Docker Compose`, external `Ollama`, single API key, streaming required
 - Observability: structured route decision logs plus stable auth/provider API error envelopes
-
-## Pending
-
-- Phase 10: Compose, docs, and OpenClaw validation
+- Delivery closeout: Docker assets, `.env.example`, README deployment flow, and OpenClaw-compatible integration checks
 
 ## Next Step
 
-Start `Phase 10: Compose, docs, and OpenClaw validation`.
+Open a new planning cycle for post-v1 enhancements.
