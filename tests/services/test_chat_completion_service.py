@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from router_p.api.schemas.chat import ChatCompletionRequest
@@ -354,3 +356,79 @@ def test_service_streams_boundary_classified_requests_through_selected_provider(
 
     assert classifier.called is True
     assert [chunk.content_delta for chunk in chunks] == ["Hel", "lo"]
+
+
+def test_service_logs_direct_local_route_decision(caplog):
+    logger = logging.getLogger("router_p.test.chat")
+    service = ChatCompletionService(provider=StubProvider(), logger=logger)
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Write a short greeting"}],
+    )
+
+    with caplog.at_level(logging.INFO, logger="router_p.test.chat"):
+        service.create_completion(request)
+
+    assert caplog.records[0].route_decision == {
+        "provider": "ollama",
+        "selected_model": "qwen3:4b",
+        "route_layer": "explicit_model",
+        "rule": "explicit_model",
+    }
+
+
+def test_service_logs_boundary_classified_route_decision(caplog):
+    logger = logging.getLogger("router_p.test.chat")
+    settings = Settings(local_general_model="qwen3:4b")
+    classifier = StubBoundaryClassifier(ModelSlot.LOCAL_TEXT)
+    service = ChatCompletionService(
+        settings=settings,
+        router=BoundaryRouter(),
+        provider=StubProvider(),
+        boundary_classifier=classifier,
+        logger=logger,
+    )
+    request = ChatCompletionRequest(
+        model="router-auto",
+        messages=[{"role": "user", "content": "Help me figure out the best model for this"}],
+    )
+
+    with caplog.at_level(logging.INFO, logger="router_p.test.chat"):
+        service.create_completion(request)
+
+    assert caplog.records[0].route_decision == {
+        "provider": "ollama",
+        "selected_model": "qwen3:4b",
+        "route_layer": "boundary_classifier",
+        "rule": "boundary_inconclusive",
+    }
+
+
+def test_service_logs_fallback_route_decision(caplog):
+    logger = logging.getLogger("router_p.test.chat")
+    settings = Settings(
+        local_general_model="qwen3:4b",
+        cloud_general_model="gpt-general",
+    )
+    service = ChatCompletionService(
+        settings=settings,
+        provider=FailingLocalProvider(),
+        cloud_provider=StubCloudProvider(),
+        fallback_policy=StubFallbackPolicy(),
+        logger=logger,
+    )
+    request = ChatCompletionRequest(
+        model="qwen3:4b",
+        messages=[{"role": "user", "content": "Hello"}],
+    )
+
+    with caplog.at_level(logging.INFO, logger="router_p.test.chat"):
+        service.create_completion(request)
+
+    assert caplog.records[-1].route_decision == {
+        "provider": "cloud",
+        "selected_model": "gpt-general",
+        "route_layer": "fallback",
+        "rule": "local_exception",
+        "fallback_reason": "local failed",
+    }

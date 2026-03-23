@@ -1,3 +1,4 @@
+import logging
 from time import time
 from uuid import uuid4
 
@@ -10,6 +11,7 @@ from router_p.api.schemas.chat import (
 )
 from router_p.config import Settings, get_settings
 from router_p.domain.model_slots import ModelSlot, is_cloud_slot, is_local_slot, resolve_model_slot
+from router_p.observability.logging import DecisionLogRecord, log_route_decision
 from router_p.providers.cloud import OpenAICompatibleCloudProvider
 from router_p.providers.ollama import OllamaChatProvider
 from router_p.providers.types import ProviderChatRequest, ProviderChatResponse
@@ -27,6 +29,7 @@ class ChatCompletionService:
         cloud_provider: OpenAICompatibleCloudProvider | None = None,
         boundary_classifier: BoundaryClassifier | None = None,
         fallback_policy: FallbackPolicy | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._router = router or RuleRouter()
@@ -37,20 +40,29 @@ class ChatCompletionService:
         )
         self._boundary_classifier = boundary_classifier or BoundaryClassifier(settings=self._settings)
         self._fallback_policy = fallback_policy or FallbackPolicy()
+        self._logger = logger or logging.getLogger("router_p.chat")
 
-    def _resolve_target(self, request: ChatCompletionRequest) -> tuple[str, ModelSlot | None]:
+    def _resolve_target(
+        self,
+        request: ChatCompletionRequest,
+    ) -> tuple[str, ModelSlot | None, str, str]:
         response_model = request.model
         target_slot: ModelSlot | None = None
+        route_layer = "explicit_model"
+        rule = "explicit_model"
 
         if request.model == "router-auto":
             decision = self._router.route(request)
             target_slot = decision.slot
+            route_layer = "rule_router"
+            rule = decision.rule_name
             if target_slot is ModelSlot.LOCAL_BOUNDARY:
                 target_slot = self._boundary_classifier.classify(request)
+                route_layer = "boundary_classifier"
             response_model = resolve_model_slot(decision.slot, self._settings) or decision.slot.value
             if target_slot is not decision.slot:
                 response_model = resolve_model_slot(target_slot, self._settings) or target_slot.value
-        return response_model, target_slot
+        return response_model, target_slot, route_layer, rule
 
     def _provider_sets(
         self,
@@ -70,6 +82,26 @@ class ChatCompletionService:
         }
         return local_explicit_models, cloud_explicit_models
 
+    def _log_decision(
+        self,
+        *,
+        provider: str,
+        selected_model: str,
+        route_layer: str,
+        rule: str,
+        fallback_reason: str | None = None,
+    ) -> None:
+        log_route_decision(
+            self._logger,
+            DecisionLogRecord(
+                provider=provider,
+                selected_model=selected_model,
+                route_layer=route_layer,
+                rule=rule,
+                fallback_reason=fallback_reason,
+            ),
+        )
+
     def create_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
         for message in reversed(request.messages):
             if message.role == "user":
@@ -81,7 +113,7 @@ class ChatCompletionService:
         content = f"Echo: {last_user_message}"
         prompt_tokens = sum(len(message.content.split()) for message in request.messages)
         completion_tokens = len(content.split())
-        response_model, target_slot = self._resolve_target(request)
+        response_model, target_slot, route_layer, rule = self._resolve_target(request)
 
         local_explicit_models, cloud_explicit_models = self._provider_sets()
 
@@ -93,6 +125,12 @@ class ChatCompletionService:
         ) or response_model in cloud_explicit_models
 
         if should_use_local_provider:
+            self._log_decision(
+                provider="ollama",
+                selected_model=response_model,
+                route_layer=route_layer,
+                rule=rule,
+            )
             try:
                 provider_response = self._provider.complete(
                     ProviderChatRequest(
@@ -103,9 +141,17 @@ class ChatCompletionService:
                 )
             except Exception as exc:
                 if self._fallback_policy.should_fallback_from_exception(exc):
+                    fallback_model = self._settings.cloud_general_model or response_model
+                    self._log_decision(
+                        provider="cloud",
+                        selected_model=fallback_model,
+                        route_layer="fallback",
+                        rule="local_exception",
+                        fallback_reason=str(exc),
+                    )
                     provider_response = self._cloud_provider.complete(
                         ProviderChatRequest(
-                            model=self._settings.cloud_general_model or response_model,
+                            model=fallback_model,
                             messages=request.messages,
                             timeout_seconds=self._settings.request_timeout_seconds,
                         )
@@ -114,9 +160,17 @@ class ChatCompletionService:
                     raise
 
             if self._fallback_policy.should_fallback_from_response(provider_response):
+                fallback_model = self._settings.cloud_general_model or response_model
+                self._log_decision(
+                    provider="cloud",
+                    selected_model=fallback_model,
+                    route_layer="fallback",
+                    rule="weak_response",
+                    fallback_reason="local response triggered fallback policy",
+                )
                 provider_response = self._cloud_provider.complete(
                     ProviderChatRequest(
-                        model=self._settings.cloud_general_model or response_model,
+                        model=fallback_model,
                         messages=request.messages,
                         timeout_seconds=self._settings.request_timeout_seconds,
                     )
@@ -127,6 +181,12 @@ class ChatCompletionService:
             completion_tokens = provider_response.completion_tokens
             response_model = provider_response.raw_model
         elif should_use_cloud_provider:
+            self._log_decision(
+                provider="cloud",
+                selected_model=response_model,
+                route_layer=route_layer,
+                rule=rule,
+            )
             provider_response = self._cloud_provider.complete(
                 ProviderChatRequest(
                     model=response_model,
@@ -156,7 +216,7 @@ class ChatCompletionService:
         )
 
     def stream_completion(self, request: ChatCompletionRequest):
-        response_model, target_slot = self._resolve_target(request)
+        response_model, target_slot, route_layer, rule = self._resolve_target(request)
         local_explicit_models, cloud_explicit_models = self._provider_sets()
 
         should_use_local_provider = (
@@ -167,6 +227,12 @@ class ChatCompletionService:
         ) or response_model in cloud_explicit_models
 
         if should_use_local_provider:
+            self._log_decision(
+                provider="ollama",
+                selected_model=response_model,
+                route_layer=route_layer,
+                rule=rule,
+            )
             yield from self._provider.stream_complete(
                 ProviderChatRequest(
                     model=response_model,
@@ -175,6 +241,12 @@ class ChatCompletionService:
                 )
             )
         elif should_use_cloud_provider:
+            self._log_decision(
+                provider="cloud",
+                selected_model=response_model,
+                route_layer=route_layer,
+                rule=rule,
+            )
             yield from self._cloud_provider.stream_complete(
                 ProviderChatRequest(
                     model=response_model,
